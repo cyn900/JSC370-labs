@@ -88,10 +88,15 @@ Once you are done setting up the project, you can now start working with the MET
 ## Setup in R
 
 1. Load the `data.table` (and the `dtplyr` and `dplyr` packages).
+```{r}
+library(data.table)
+library(dtplyr)
+library(dplyr)
+```
 
 2. Load the met data from https://raw.githubusercontent.com/JSC370/JSC370-2024/main/data/met_all_2023.gz, and also the station data. For the latter, you can use the code we used during lecture to pre-process the stations data:
 
-```{r stations-data, eval = FALSE}
+```{r stations-data}
 # Download the data
 stations <- fread("ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv")
 stations[, USAF := as.integer(USAF)]
@@ -110,14 +115,28 @@ stations <- stations[!is.na(USAF)]
 # Removing duplicates
 stations[, n := 1:.N, by = .(USAF)]
 stations <- stations[n == 1,][, n := NULL]
+```
 
+```{r}
 # Read in the met data
+download.file(
+  "https://raw.githubusercontent.com/JSC370/JSC370-2025/main/data/met/met_all.gz",
+  destfile = "met_all.gz",
+  method   = "curl",
+  timeout  = 60
+  )
+
+met <- data.table::fread("met_all.gz")
 ```
 
 3. Merge the data as we did during the lecture. Use the `merge()` code and you can also try the tidy way with `left_join()`
 
 ```{r}
-
+met <- left_join(
+  x = met,
+  y = stations,
+  by = c("USAFID" = "USAF")
+)
 ```
 
 
@@ -126,9 +145,41 @@ stations <- stations[n == 1,][, n := NULL]
 Across all weather stations, what stations have the median values of temperature, wind speed, and atmospheric pressure? Using the `quantile()` function, identify these three stations. Do they coincide?
 
 ```{r}
+# medians across all stations and times
+medians <- met[, .(
+  temp_50 = quantile(temp, probs = .5, na.rm = TRUE),
+  wind_sp_50 = quantile(wind.sp, probs = .5, na.rm = TRUE),
+  atm_press_50 = quantile(atm.press, probs = .5, na.rm = TRUE)
+)]
+medians
 
 ```
+```{r}
+# medians by station (keep state)
+station_med <- met[, .(
+  temp = quantile(temp, probs = .5, na.rm = TRUE),
+  wind.sp = quantile(wind.sp, probs = .5, na.rm = TRUE),
+  atm.press = quantile(atm.press, probs = .5, na.rm = TRUE)
+), by = .(USAFID, STATE)]
+```
 
+```{r}
+# Now we can find the stations that are the closest to these
+# Median temperature stations
+station_med[, temp_dist := abs(temp - medians$temp_50)]
+median_temp_station <- station_med[temp_dist == 0]
+median_temp_station
+
+# Median wind.sp stations
+station_med[, wind.sp_dist := abs(wind.sp - medians$wind_sp_50)]
+median_wind_sp_station <- station_med[wind.sp_dist == 0]
+median_wind_sp_station
+
+# Median atm.press stations
+station_med[, atm.press_dist := abs(atm.press - medians$atm_press_50)]
+median_atm_press_station <- station_med[atm.press_dist == 0]
+median_atm_press_station
+```
 Knit the document, commit your changes, and save it on GitHub. Don't forget to add `README.md` to the tree, the first time you render it.
 
 ## Question 2: Representative station per state
