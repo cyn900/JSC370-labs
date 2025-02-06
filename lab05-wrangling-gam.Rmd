@@ -346,3 +346,17 @@ summary(gam_mod)
 # Plot the GAM model
 plot(gam_mod)
 ```
+
+Linear Model (lm) Analysis
+
+	•	Adjusted R-squared: 0.2111 — This value indicates that about 21.11% of the variance in temperature is explained by atmospheric pressure using a linear model.
+	•	Residual Standard Error: 3.33 on 898 degrees of freedom — This suggests the average distance of the data points from the fitted line is approximately 3.33 degrees.
+	•	F-statistic: The F-statistic is significant, indicating that the model is statistically significant overall.
+	
+Generalized Additive Model (GAM) Analysis
+
+	•	Adjusted R-squared: 0.293 — A higher adjusted R-squared than the linear model, indicating a better fit with about 29.3% of the variance in temperature explained by the model.
+	•	Deviance Explained: 30.1% — Similar to the adjusted R-squared, it tells us how much of the variability in temperature is explained by the model.
+	•	Smooth Term Significance: The smooth term for atmospheric pressure is highly significant, suggesting a strong non-linear relationship between atmospheric pressure and temperature.
+
+Overall, the GAM provides a better fit to the data than the linear model, as evidenced by the higher adjusted R-squared and deviance explained values.
