@@ -187,7 +187,26 @@ Knit the document, commit your changes, and save it on GitHub. Don't forget to a
 Just like the previous question, you are asked to identify what is the most representative, the median, station per state. This time, instead of looking at one variable at a time, look at the euclidean distance. If multiple stations show in the median, select the one located at the lowest latitude.
 
 ```{r}
+# Now we can compute the median per state
+station_med[, temp_50 := quantile(temp, probs = .5, na.rm=TRUE), by = STATE]
+station_med[, wind_sp_50 := quantile(wind.sp, probs = .5, na.rm=TRUE), by = STATE]
 
+# Get the Euclidean distance
+station_med[, eudist := sqrt(
+  (temp - temp_50)^2 + (wind.sp - wind_sp_50)^2
+)]
+
+# Choose the most representative, the median, station per state with the lowest Euclidean distance.
+id_station <- station_med[ , .SD[which.min(eudist)], by = STATE]
+
+id_station <- merge(
+  x = id_station,
+  y = stations,
+  by.x = "USAFID",
+  by.y = "USAF",
+  all.x = TRUE,
+  all.y = FALSE
+)
 ```
 
 Knit the doc and save it on GitHub.
