@@ -155,11 +155,13 @@ medians
 
 ```
 ```{r}
-# medians by station (keep state)
+# medians by station
 station_med <- met[, .(
   temp = quantile(temp, probs = .5, na.rm = TRUE),
   wind.sp = quantile(wind.sp, probs = .5, na.rm = TRUE),
-  atm.press = quantile(atm.press, probs = .5, na.rm = TRUE)
+  atm.press = quantile(atm.press, probs = .5, na.rm = TRUE),
+  lon = mean(lon, na.rm = TRUE),
+  lat = mean(lat, na.rm = TRUE)
 ), by = .(USAFID, STATE)]
 ```
 
@@ -216,7 +218,50 @@ Knit the doc and save it on GitHub.
 For each state, identify what is the station that is closest to the mid-point of the state. Combining these with the stations you identified in the previous question, use `leaflet()` to visualize all ~100 points in the same figure, applying different colors for those identified in this question.
 
 ```{r}
+# Get the mid point of the state
+mid_point <- met[, .(
+  lon_50 = quantile(lon, probs = .5, na.rm = TRUE),
+  lat_50 = quantile(lat, probs = .5, na.rm = TRUE)
+  
+), by = STATE]
 
+mid <- merge(x = met, y = mid_point, by = "STATE")
+```
+
+```{r}
+# Calculate Euclidean distance for lon and lat
+mid[, mid_eudist := sqrt(
+  (lon - lon_50)^2 + (lat - lat_50)^2
+)]
+
+# Find the station with the minimum Euclidean distance in each state
+mid_station <- mid[, .SD[which.min(mid_eudist)], by = STATE]
+
+# Code for visualization
+library(leaflet)
+
+leaflet() %>%
+  addProviderTiles('CartoDB.Positron') %>%
+  addCircles(
+    data = mid_station,
+    lat = ~lat,
+    lng = ~lon,
+    popup = "geographic mid station",
+    opacity = 1,
+    fillOpacity = 1,
+    radius = 400,
+    color = "blue"
+  ) %>%
+  addCircles(
+    data = id_station,
+    lat = ~lat,
+    lng = ~lon,
+    popup = "eudist mid station",
+    opacity = 1,
+    fillOpacity = 1,
+    radius = 400,
+    color = "magenta"
+  )
 ```
 
 Knit the doc and save it on GitHub.
