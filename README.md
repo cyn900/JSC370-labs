@@ -92,6 +92,10 @@ Once you are done setting up the project, you can now start working with the MET
 library(data.table)
 library(dtplyr)
 library(dplyr)
+library(tidyr)
+library(kableExtra)
+library(ggplot2)
+library(mgcv)
 ```
 
 2. Load the met data from https://raw.githubusercontent.com/JSC370/JSC370-2024/main/data/met_all_2023.gz, and also the station data. For the latter, you can use the code we used during lecture to pre-process the stations data:
@@ -155,7 +159,7 @@ medians
 
 ```
 ```{r}
-# medians by station
+# medians by station (keep state)
 station_med <- met[, .(
   temp = quantile(temp, probs = .5, na.rm = TRUE),
   wind.sp = quantile(wind.sp, probs = .5, na.rm = TRUE),
@@ -277,7 +281,10 @@ Start by computing the states' average temperature. Use that measurement to clas
 - High: temp >= 25
 
 ```{r}
-
+# create elev_cat
+met[, elev_cat := fifelse(
+  elev < 90, "low-elev", "high-elev"
+)]
 ```
 
 Once you are done with that, you can compute the following:
@@ -291,6 +298,15 @@ Once you are done with that, you can compute the following:
 All by the levels described before.
 
 ```{r}
+summary_table <- met %>%
+  group_by(STATE, elev_cat) %>%
+  summarize(temp_mean = mean(temp, na.rm = TRUE)) %>%
+  pivot_wider(names_from = elev_cat, values_from = temp_mean)
+
+# Create table to present the data
+kable(summary_table, booktabs = TRUE) %>%
+  kable_styling(font_size = 10) %>%
+  kable_paper("hover", full_width = FALSE)
 
 ```
 
@@ -306,5 +322,27 @@ Let's practice running regression models with smooth functions on X. We need the
 - fit both a linear model and a spline model (use `gam()` with a cubic regression spline on wind speed). Summarize and plot the results from the models and interpret which model is the best fit and why.
 
 ```{r}
+# Filter out air pressure values between 1000 and 1020
+station_med_lt <- lazy_dt(station_med)
+station_med_lt <- station_med_lt %>%
+  filter(between(atm.press, 1000, 1020)) %>%
+  collect()
 
+# Create a ggplot with points and smoothing lines
+ggplot(station_med_lt, aes(x=atm.press, y=temp)) +
+  geom_point() +
+  geom_smooth(method="lm", col="cyan") +
+  geom_smooth(method="gam", col="blue")
+```
+```{r}
+# Linear model with temp being y, atm press being x
+lm_mod <- lm(temp ~ atm.press, data = station_med_lt)
+summary(lm_mod)
+
+# GAM with "cr" cubic regression line, 20 degree of freedom
+gam_mod <- gam(temp ~ s(atm.press, bs="cr", k=20), data = station_med_lt)
+summary(gam_mod)
+
+# Plot the GAM model
+plot(gam_mod)
 ```
